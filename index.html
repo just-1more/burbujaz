@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BurbujAZ — Revienta Todo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;700;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a1a;
+    --accent: #ff3cac;
+    --accent2: #00f5d4;
+    --accent3: #ffe45e;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    transition: opacity .35s, transform .35s;
+  }
+  .screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.04); }
+
+  /* ── STARFIELD BG ── */
+  #bg-canvas {
+    position: fixed; inset: 0; z-index: 0;
+  }
+
+  /* ── GAME CANVAS ── */
+  #game-canvas {
+    position: fixed; inset: 0; z-index: 1;
+    cursor: crosshair;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 50;
+    display: flex; align-items: center; gap: 18px;
+    padding: 10px 20px;
+    background: linear-gradient(180deg, rgba(10,10,26,.9) 70%, transparent);
+    pointer-events: none;
+  }
+  #hud.hidden { display: none; }
+
+  .hud-pill {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 999px;
+    padding: 4px 16px;
+    font-size: 1rem; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hud-pill span { color: var(--accent2); font-size: 1.15rem; }
+
+  #score-val  { color: var(--accent3); }
+  #lives-val  { color: var(--accent); }
+  #level-val  { color: var(--accent2); }
+
+  #bar-wrap {
+    flex: 1; height: 10px;
+    background: rgba(255,255,255,.1);
+    border-radius: 999px; overflow: hidden;
+  }
+  #bar-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width .15s;
+  }
+
+  /* ── START SCREEN ── */
+  .logo {
+    font-family: 'Boogaloo', cursive;
+    font-size: clamp(3rem, 10vw, 6rem);
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent2) 0%, var(--accent) 60%, var(--accent3) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px rgba(255,60,172,.5));
+    margin-bottom: .2em;
+    animation: pulse-logo 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-logo {
+    0%,100% { filter: drop-shadow(0 0 30px rgba(255,60,172,.5)); }
+    50%      { filter: drop-shadow(0 0 60px rgba(0,245,212,.7)); }
+  }
+
+  .tagline {
+    font-size: clamp(.9rem, 2vw, 1.2rem);
+    color: rgba(255,255,255,.55);
+    letter-spacing: .15em; text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  .btn {
+    font-family: 'Boogaloo', cursive;
+    font-size: 1.5rem; letter-spacing: .06em;
+    padding: .6em 2.2em;
+    border: none; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #000;
+    box-shadow: 0 0 30px rgba(255,60,172,.45);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover  { transform: scale(1.07); box-shadow: 0 0 50px rgba(0,245,212,.6); }
+  .btn:active { transform: scale(.96); }
+
+  .btn-secondary {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff;
+    box-shadow: none;
+    margin-top: .8rem;
+    font-size: 1.1rem;
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,.15); box-shadow: none; }
+
+  /* ── LEVEL ANNOUNCE ── */
+  #level-announce {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .level-badge {
+    font-family: 'Boogaloo', cursive;
+    font-size: clamp(3rem,12vw,7rem);
+    color: #fff;
+    text-shadow: 0 0 60px var(--accent2), 0 0 20px var(--accent);
+    animation: badge-pop .55s cubic-bezier(.175,.885,.32,1.275) forwards;
+    opacity: 0;
+  }
+  .level-sub {
+    font-size: 1.2rem; color: rgba(255,255,255,.6);
+    letter-spacing: .2em; text-transform: uppercase;
+    animation: badge-pop .55s .1s cubic-bezier(.175,.885,.32,1.275) forwards;
+    opacity: 0;
+  }
+  @keyframes badge-pop {
+    0%   { opacity:0; transform: scale(.4); }
+    100% { opacity:1; transform: scale(1); }
+  }
+
+  /* ── GAME OVER / WIN ── */
+  #end-screen {
+    gap: 12px;
+    background: radial-gradient(ellipse at center, rgba(20,10,40,.95) 50%, rgba(10,10,26,.98));
+  }
+  .end-title {
+    font-family: 'Boogaloo', cursive;
+    font-size: clamp(2.5rem,8vw,5rem);
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .end-score { font-size: 1.3rem; color: rgba(255,255,255,.7); }
+  .end-score strong { color: var(--accent3); font-size: 1.8rem; }
+
+  /* ── HOW TO PLAY ── */
+  #how-screen { gap: 14px; background: rgba(10,10,26,.97); }
+  .how-title { font-family:'Boogaloo',cursive; font-size:2.2rem; color:var(--accent2); }
+  .how-row { font-size: 1rem; color:rgba(255,255,255,.75); text-align:center; max-width:360px; line-height:1.5; }
+  .how-row strong { color:#fff; }
+
+  /* ── POP PARTICLES ── */
+  .pop-particle {
+    position: fixed; border-radius: 50%;
+    pointer-events: none; z-index: 60;
+    animation: particle-fly .6s ease-out forwards;
+  }
+  @keyframes particle-fly {
+    0%   { opacity:1; transform: translate(0,0) scale(1); }
+    100% { opacity:0; transform: translate(var(--dx), var(--dy)) scale(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- background stars -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- game field -->
+<canvas id="game-canvas"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div class="hud-pill">Nv <span id="level-val">1</span></div>
+  <div class="hud-pill">⭐ <span id="score-val">0</span></div>
+  <div class="hud-pill">❤️ <span id="lives-val">3</span></div>
+  <div id="bar-wrap"><div id="bar-fill" style="width:0%"></div></div>
+</div>
+
+<!-- level announce -->
+<div id="level-announce"></div>
+
+<!-- START -->
+<div id="start-screen" class="screen">
+  <div class="logo">BurbujAZ</div>
+  <div class="tagline">Revienta todo — no dejes escapar ninguna</div>
+  <button class="btn" onclick="startGame()">¡JUGAR!</button>
+  <button class="btn btn-secondary" onclick="showHow()">¿Cómo jugar?</button>
+</div>
+
+<!-- HOW TO PLAY -->
+<div id="how-screen" class="screen hidden">
+  <div class="how-title">¿Cómo jugar?</div>
+  <div class="how-row">🫧 Las burbujas llenarán la pantalla — <strong>haz clic</strong> para reventarlas antes de que se acumulen demasiado.</div>
+  <div class="how-row">💥 Cada nivel hay más burbujas, más rápidas y más pequeñas.</div>
+  <div class="how-row">❤️ Pierdes una vida cuando la pantalla se llena al <strong>100%</strong>. Con 3 vidas perdidas, ¡game over!</div>
+  <div class="how-row">⭐ Las burbujas más pequeñas dan más puntos.</div>
+  <button class="btn" style="margin-top:1rem" onclick="hideHow()">Volver</button>
+</div>
+
+<!-- END -->
+<div id="end-screen" class="screen hidden">
+  <div class="end-title" id="end-title">GAME OVER</div>
+  <div class="end-score">Puntuación final: <strong id="end-score-val">0</strong></div>
+  <div class="end-score" id="end-level-line">Llegaste al nivel <strong id="end-level-val">1</strong></div>
+  <button class="btn" style="margin-top:1.2rem" onclick="startGame()">Otra vez</button>
+  <button class="btn btn-secondary" onclick="showStart()">Menú</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  BACKGROUND STARS
+// ══════════════════════════════════════════════
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx    = bgCanvas.getContext('2d');
+let stars = [];
+function initStars() {
+  bgCanvas.width  = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+  stars = Array.from({length:120}, () => ({
+    x: Math.random()*bgCanvas.width,
+    y: Math.random()*bgCanvas.height,
+    r: Math.random()*1.5+.3,
+    a: Math.random(),
+    speed: Math.random()*.4+.1
+  }));
+}
+function drawStars(t) {
+  bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+  bgCtx.fillStyle = '#0a0a1a';
+  bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
+  for (const s of stars) {
+    s.a += s.speed*.01;
+    const alpha = .3 + .5*Math.abs(Math.sin(s.a));
+    bgCtx.beginPath();
+    bgCtx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    bgCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+    bgCtx.fill();
+  }
+  requestAnimationFrame(drawStars);
+}
+initStars(); drawStars(0);
+window.addEventListener('resize', initStars);
+
+// ══════════════════════════════════════════════
+//  GAME ENGINE
+// ══════════════════════════════════════════════
+const gc   = document.getElementById('game-canvas');
+const gctx = gc.getContext('2d');
+
+let W, H;
+function resizeGame() {
+  W = gc.width  = window.innerWidth;
+  H = gc.height = window.innerHeight;
+}
+resizeGame();
+window.addEventListener('resize', resizeGame);
+
+// ── Level config ──
+// Each level: how many bubbles fill the screen, how fast they spawn, size range, speed
+function levelConfig(lvl) {
+  const l = Math.min(lvl, 20);
+  return {
+    maxBubbles:    30 + l*12,           // total on screen to trigger overflow
+    spawnRate:     Math.max(30, 280 - l*22), // ms between spawns (faster each level)
+    spawnBurst:    1 + Math.floor(l/2),      // how many spawn at once
+    minR:          Math.max(14, 38 - l*1.5),
+    maxR:          Math.max(22, 68 - l*2),
+    minSpeed:      0.55 + l*0.12,
+    maxSpeed:      1.2  + l*0.22,
+    fillLimit:     0.72 - Math.min(l*.018, .25), // fraction of screen area = danger
+    lives:         3
+  };
+}
+
+// ── Palette ──
+const PALETTES = [
+  ['#ff3cac','#ff6b6b','#ffa07a'],
+  ['#00f5d4','#00c9ff','#7b2ff7'],
+  ['#ffe45e','#ff6b35','#f7c59f'],
+  ['#a8ff78','#78ffd6','#00c9ff'],
+  ['#f953c6','#b91d73','#ffe45e'],
+  ['#4facfe','#00f2fe','#a8ff78'],
+];
+
+function randColor(lvl) {
+  const pal = PALETTES[lvl % PALETTES.length];
+  return pal[Math.floor(Math.random()*pal.length)];
+}
+
+// ── State ──
+let bubbles=[], score=0, lives=3, level=1, running=false;
+let cfg, spawnTimer=0, lastTime=0, fillFraction=0;
+let animId=null;
+
+class Bubble {
+  constructor(lvl) {
+    const c = levelConfig(lvl);
+    this.r  = c.minR + Math.random()*(c.maxR - c.minR);
+    const spd = c.minSpeed + Math.random()*(c.maxSpeed - c.minSpeed);
+    const angle = Math.random()*Math.PI*2;
+    this.vx = Math.cos(angle)*spd;
+    this.vy = Math.sin(angle)*spd;
+
+    // spawn from any edge + some random interior near edges
+    const edge = Math.floor(Math.random()*4);
+    const margin = this.r*2;
+    if (edge===0)      { this.x=Math.random()*W; this.y=-margin; }
+    else if (edge===1) { this.x=W+margin; this.y=Math.random()*H; }
+    else if (edge===2) { this.x=Math.random()*W; this.y=H+margin; }
+    else               { this.x=-margin; this.y=Math.random()*H; }
+
+    this.color  = randColor(lvl);
+    this.alpha  = 0;
+    this.popped = false;
+    this.wobble = Math.random()*Math.PI*2;
+    this.wobbleSpeed = .04 + Math.random()*.03;
+    this.points = Math.max(1, Math.round(8 - this.r/10));
+  }
+
+  update(dt) {
+    this.x += this.vx*dt;
+    this.y += this.vy*dt;
+    this.wobble += this.wobbleSpeed*dt;
+
+    // bounce off walls
+    if (this.x - this.r < 0)  { this.x = this.r;  this.vx = Math.abs(this.vx); }
+    if (this.x + this.r > W)  { this.x = W-this.r; this.vx = -Math.abs(this.vx); }
+    if (this.y - this.r < 0)  { this.y = this.r;  this.vy = Math.abs(this.vy); }
+    if (this.y + this.r > H)  { this.y = H-this.r; this.vy = -Math.abs(this.vy); }
+
+    // fade in
+    if (this.alpha < 1) this.alpha = Math.min(1, this.alpha + .04*dt);
+  }
+
+  draw(ctx) {
+    const wobbleR = this.r + Math.sin(this.wobble)*this.r*.06;
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+
+    // glow
+    const glow = ctx.createRadialGradient(
+      this.x - wobbleR*.3, this.y - wobbleR*.3, wobbleR*.05,
+      this.x, this.y, wobbleR*1.15
+    );
+    glow.addColorStop(0, 'rgba(255,255,255,.45)');
+    glow.addColorStop(.4, this.color+'cc');
+    glow.addColorStop(1, this.color+'22');
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, wobbleR*1.12, 0, Math.PI*2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // bubble body
+    const grad = ctx.createRadialGradient(
+      this.x - wobbleR*.35, this.y - wobbleR*.35, wobbleR*.08,
+      this.x, this.y, wobbleR
+    );
+    grad.addColorStop(0, 'rgba(255,255,255,.75)');
+    grad.addColorStop(.25, this.color+'bb');
+    grad.addColorStop(.7, this.color+'66');
+    grad.addColorStop(1, this.color+'11');
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, wobbleR, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // rim
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, wobbleR, 0, Math.PI*2);
+    ctx.strokeStyle = this.color+'99';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // shine
+    ctx.beginPath();
+    ctx.arc(this.x - wobbleR*.3, this.y - wobbleR*.3, wobbleR*.22, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  hits(px, py) {
+    const dx=px-this.x, dy=py-this.y;
+    return dx*dx+dy*dy <= this.r*this.r;
+  }
+}
+
+// ── Spawn ──
+function spawnBubbles() {
+  const c = levelConfig(level);
+  const count = c.spawnBurst;
+  for (let i=0; i<count; i++) {
+    if (bubbles.length < c.maxBubbles + 40) {
+      bubbles.push(new Bubble(level));
+    }
+  }
+}
+
+// ── Fill calc ──
+function calcFill() {
+  const area = bubbles.reduce((s,b) => s + Math.PI*b.r*b.r*b.alpha, 0);
+  return area / (W*H);
+}
+
+// ── Pop ──
+function popBubble(b) {
+  score += b.points;
+  spawnPopParticles(b.x, b.y, b.color, b.r);
+  document.getElementById('score-val').textContent = score;
+}
+
+// ── Particles ──
+function spawnPopParticles(x, y, color, r) {
+  const count = Math.min(10, Math.floor(r/4)+4);
+  for (let i=0; i<count; i++) {
+    const el = document.createElement('div');
+    el.className = 'pop-particle';
+    const size = 4+Math.random()*6;
+    el.style.cssText = `
+      left:${x}px; top:${y}px;
+      width:${size}px; height:${size}px;
+      background:${color};
+      --dx:${(Math.random()-0.5)*r*3}px;
+      --dy:${(Math.random()-0.5)*r*3}px;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 650);
+  }
+}
+
+// ── Click handler ──
+gc.addEventListener('click', e => {
+  if (!running) return;
+  const rect = gc.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  // pop all hit (could overlap)
+  let hit = false;
+  bubbles = bubbles.filter(b => {
+    if (!hit && b.hits(px,py)) { popBubble(b); hit=true; return false; }
+    return true;
+  });
+});
+
+// ── Game loop ──
+function gameLoop(ts) {
+  if (!running) return;
+  const dt = Math.min((ts - lastTime)/16.67, 3); // normalized to 60fps ticks
+  lastTime = ts;
+
+  cfg = levelConfig(level);
+
+  // spawn
+  spawnTimer += ts - (lastTime - dt*16.67);
+  // simpler: just always track raw elapsed
+  // we'll handle spawn via setInterval below
+
+  // clear
+  gctx.clearRect(0,0,W,H);
+
+  // update & draw
+  for (const b of bubbles) {
+    b.update(dt);
+    b.draw(gctx);
+  }
+
+  // fill bar
+  fillFraction = calcFill();
+  const pct = Math.min(fillFraction / cfg.fillLimit, 1);
+  document.getElementById('bar-fill').style.width = (pct*100)+'%';
+
+  // danger?
+  if (pct >= 1) {
+    lives--;
+    document.getElementById('lives-val').textContent = lives;
+    bubbles = []; // clear screen
+    if (lives <= 0) { endGame(); return; }
+  }
+
+  // level up — score threshold
+  const nextLevelScore = level * 60;
+  if (score >= nextLevelScore) {
+    level++;
+    document.getElementById('level-val').textContent = level;
+    restartSpawner();
+    showLevelAnnounce(level);
+  }
+
+  animId = requestAnimationFrame(gameLoop);
+}
+
+// ── Spawner interval (separate from rAF) ──
+let spawnInterval = null;
+function restartSpawner() {
+  if (spawnInterval) clearInterval(spawnInterval);
+  const c = levelConfig(level);
+  spawnInterval = setInterval(spawnBubbles, c.spawnRate);
+  // immediate burst so screen fills fast
+  for(let i=0;i<3;i++) spawnBubbles();
+}
+
+// ── Level announce ──
+function showLevelAnnounce(lvl) {
+  const el = document.getElementById('level-announce');
+  el.innerHTML = `<div class="level-badge">NIVEL ${lvl}</div><div class="level-sub">¡A reventar más!</div>`;
+  setTimeout(() => {
+    el.innerHTML = '';
+  }, 1800);
+}
+
+// ── Start ──
+function startGame() {
+  hideAll();
+  document.getElementById('hud').classList.remove('hidden');
+  bubbles = []; score = 0; lives = 3; level = 1; fillFraction = 0;
+  document.getElementById('score-val').textContent  = 0;
+  document.getElementById('lives-val').textContent  = 3;
+  document.getElementById('level-val').textContent  = 1;
+  document.getElementById('bar-fill').style.width   = '0%';
+  running = true;
+  lastTime = performance.now();
+  restartSpawner();
+  showLevelAnnounce(1);
+  animId = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  running = false;
+  clearInterval(spawnInterval);
+  cancelAnimationFrame(animId);
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('end-score-val').textContent = score;
+  document.getElementById('end-level-val').textContent  = level;
+  document.getElementById('end-title').textContent = lives<=0 ? 'GAME OVER' : '¡GANASTE!';
+  document.getElementById('end-screen').classList.remove('hidden');
+}
+
+function showStart() {
+  running = false;
+  clearInterval(spawnInterval);
+  cancelAnimationFrame(animId);
+  document.getElementById('hud').classList.add('hidden');
+  hideAll();
+  document.getElementById('start-screen').classList.remove('hidden');
+  bubbles=[];
+}
+
+function hideAll() {
+  ['start-screen','how-screen','end-screen'].forEach(id =>
+    document.getElementById(id).classList.add('hidden')
+  );
+}
+function showHow() {
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('how-screen').classList.remove('hidden');
+}
+function hideHow() {
+  document.getElementById('how-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+}
+</script>
+</body>
+</html>

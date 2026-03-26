@@ -1,0 +1,16 @@
+{
+  "name": "BurbujAZ",
+  "short_name": "BurbujAZ",
+  "start_url": "/burbujaz/",
+  "display": "fullscreen",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

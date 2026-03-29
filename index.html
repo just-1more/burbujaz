@@ -2,9 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<link rel="manifest" href="/burbujaz/manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BurbujAZ — Revienta Todo</title>
+<link rel="manifest" href="/burbujaz/manifest.json">
+
+<!-- AdMob SDK -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-2978278400821313"
+     crossorigin="anonymous"></script>
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;700;900&display=swap');
 
@@ -27,7 +32,6 @@
     user-select: none;
   }
 
-  /* ── SCREENS ── */
   .screen {
     position: fixed; inset: 0;
     display: flex; flex-direction: column;
@@ -37,18 +41,9 @@
   }
   .screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.04); }
 
-  /* ── STARFIELD BG ── */
-  #bg-canvas {
-    position: fixed; inset: 0; z-index: 0;
-  }
+  #bg-canvas { position: fixed; inset: 0; z-index: 0; }
+  #game-canvas { position: fixed; inset: 0; z-index: 1; cursor: crosshair; }
 
-  /* ── GAME CANVAS ── */
-  #game-canvas {
-    position: fixed; inset: 0; z-index: 1;
-    cursor: crosshair;
-  }
-
-  /* ── HUD ── */
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
     z-index: 50;
@@ -67,11 +62,9 @@
     font-size: 1rem; font-weight: 700;
     display: flex; align-items: center; gap: 6px;
   }
-  .hud-pill span { color: var(--accent2); font-size: 1.15rem; }
-
-  #score-val  { color: var(--accent3); }
-  #lives-val  { color: var(--accent); }
-  #level-val  { color: var(--accent2); }
+  #score-val { color: var(--accent3); }
+  #lives-val { color: var(--accent); }
+  #level-val { color: var(--accent2); }
 
   #bar-wrap {
     flex: 1; height: 10px;
@@ -84,7 +77,6 @@
     transition: width .15s;
   }
 
-  /* ── START SCREEN ── */
   .logo {
     font-family: 'Boogaloo', cursive;
     font-size: clamp(3rem, 10vw, 6rem);
@@ -130,7 +122,6 @@
   }
   .btn-secondary:hover { background: rgba(255,255,255,.15); box-shadow: none; }
 
-  /* ── LEVEL ANNOUNCE ── */
   #level-announce {
     position: fixed; inset: 0; z-index: 200;
     display: flex; flex-direction: column;
@@ -156,7 +147,6 @@
     100% { opacity:1; transform: scale(1); }
   }
 
-  /* ── GAME OVER / WIN ── */
   #end-screen {
     gap: 12px;
     background: radial-gradient(ellipse at center, rgba(20,10,40,.95) 50%, rgba(10,10,26,.98));
@@ -171,13 +161,92 @@
   .end-score { font-size: 1.3rem; color: rgba(255,255,255,.7); }
   .end-score strong { color: var(--accent3); font-size: 1.8rem; }
 
-  /* ── HOW TO PLAY ── */
-  #how-screen { gap: 14px; background: rgba(10,10,26,.97); }
-  .how-title { font-family:'Boogaloo',cursive; font-size:2.2rem; color:var(--accent2); }
-  .how-row { font-size: 1rem; color:rgba(255,255,255,.75); text-align:center; max-width:360px; line-height:1.5; }
-  .how-row strong { color:#fff; }
+  /* AD OVERLAY */
+  #ad-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(10,10,26,.97);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+  }
+  #ad-overlay.hidden { display: none; }
+  .ad-title {
+    font-family: 'Boogaloo', cursive;
+    font-size: 1.8rem; color: var(--accent2);
+  }
+  .ad-sub { font-size: .95rem; color: rgba(255,255,255,.5); }
+  #ad-container {
+    width: 320px; min-height: 250px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #ad-skip {
+    font-size: .9rem; color: rgba(255,255,255,.4);
+    cursor: pointer; margin-top: 8px;
+  }
+  #ad-skip:hover { color: #fff; }
 
-  /* ── POP PARTICLES ── */
+  /* REWARD OVERLAY */
+  #reward-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(10,10,26,.97);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+  }
+  #reward-overlay.hidden { display: none; }
+  .reward-title {
+    font-family: 'Boogaloo', cursive;
+    font-size: 2rem; color: var(--accent3);
+    text-align: center;
+  }
+  .reward-sub { font-size: 1rem; color: rgba(255,255,255,.6); text-align: center; max-width: 280px; }
+  #reward-container {
+    width: 320px; min-height: 250px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #reward-countdown {
+    font-family: 'Boogaloo', cursive;
+    font-size: 1.3rem; color: var(--accent2);
+  }
+
+  /* EXTRA LIFE BUTTON */
+  #extra-life-btn {
+    position: fixed; bottom: 20px; right: 20px;
+    z-index: 60;
+    font-family: 'Boogaloo', cursive;
+    font-size: 1rem;
+    padding: .5em 1.2em;
+    border: none; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    color: #000;
+    box-shadow: 0 0 20px rgba(255,228,94,.4);
+    display: none;
+    animation: pulse-btn 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-btn {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+
+  /* SHARE BUTTON */
+  #share-btn {
+    font-family: 'Boogaloo', cursive;
+    font-size: 1.1rem;
+    padding: .5em 1.8em;
+    border: none; border-radius: 999px; cursor: pointer;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff;
+    margin-top: .5rem;
+  }
+  #share-btn:hover { background: rgba(255,255,255,.2); }
+
   .pop-particle {
     position: fixed; border-radius: 50%;
     pointer-events: none; z-index: 60;
@@ -187,14 +256,16 @@
     0%   { opacity:1; transform: translate(0,0) scale(1); }
     100% { opacity:0; transform: translate(var(--dx), var(--dy)) scale(0); }
   }
+
+  #how-screen { gap: 14px; background: rgba(10,10,26,.97); }
+  .how-title { font-family:'Boogaloo',cursive; font-size:2.2rem; color:var(--accent2); }
+  .how-row { font-size: 1rem; color:rgba(255,255,255,.75); text-align:center; max-width:360px; line-height:1.5; }
+  .how-row strong { color:#fff; }
 </style>
 </head>
 <body>
 
-<!-- background stars -->
 <canvas id="bg-canvas"></canvas>
-
-<!-- game field -->
 <canvas id="game-canvas"></canvas>
 
 <!-- HUD -->
@@ -205,7 +276,10 @@
   <div id="bar-wrap"><div id="bar-fill" style="width:0%"></div></div>
 </div>
 
-<!-- level announce -->
+<!-- Extra life button -->
+<button id="extra-life-btn" onclick="showRewardAd()">❤️ +1 vida (ver anuncio)</button>
+
+<!-- Level announce -->
 <div id="level-announce"></div>
 
 <!-- START -->
@@ -223,19 +297,117 @@
   <div class="how-row">💥 Cada nivel hay más burbujas, más rápidas y más pequeñas.</div>
   <div class="how-row">❤️ Pierdes una vida cuando la pantalla se llena al <strong>100%</strong>. Con 3 vidas perdidas, ¡game over!</div>
   <div class="how-row">⭐ Las burbujas más pequeñas dan más puntos.</div>
+  <div class="how-row">🎁 ¿Sin vidas? ¡Ve un anuncio y gana una vida extra!</div>
   <button class="btn" style="margin-top:1rem" onclick="hideHow()">Volver</button>
 </div>
 
 <!-- END -->
 <div id="end-screen" class="screen hidden">
   <div class="end-title" id="end-title">GAME OVER</div>
-  <div class="end-score">Puntuación final: <strong id="end-score-val">0</strong></div>
-  <div class="end-score" id="end-level-line">Llegaste al nivel <strong id="end-level-val">1</strong></div>
+  <div class="end-score">Puntuación: <strong id="end-score-val">0</strong></div>
+  <div class="end-score">Nivel alcanzado: <strong id="end-level-val">1</strong></div>
   <button class="btn" style="margin-top:1.2rem" onclick="startGame()">Otra vez</button>
+  <button id="share-btn" onclick="shareScore()">📤 Compartir puntuación</button>
   <button class="btn btn-secondary" onclick="showStart()">Menú</button>
 </div>
 
+<!-- AD OVERLAY (intersticial) -->
+<div id="ad-overlay" class="hidden">
+  <div class="ad-title">Pausa publicitaria 📺</div>
+  <div class="ad-sub">El juego continúa en un momento...</div>
+  <div id="ad-container">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-app-pub-2978278400821313"
+         data-ad-slot="2944894625"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+  </div>
+  <div id="ad-skip" onclick="closeAd()">Cerrar anuncio ✕</div>
+</div>
+
+<!-- REWARD OVERLAY -->
+<div id="reward-overlay" class="hidden">
+  <div class="reward-title">🎁 ¡Gana una vida extra!</div>
+  <div class="reward-sub">Ve el anuncio completo y recibirás una vida extra</div>
+  <div id="reward-container">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-app-pub-2978278400821313"
+         data-ad-slot="7415323377"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+  </div>
+  <div id="reward-countdown">Esperando anuncio...</div>
+</div>
+
 <script>
+// ══════════════════════════════════════════════
+//  AdMob IDs
+// ══════════════════════════════════════════════
+const ADMOB = {
+  appId:        'ca-app-pub-2978278400821313~6719387056',
+  interstitial: 'ca-app-pub-2978278400821313/2944894625',
+  rewarded:     'ca-app-pub-2978278400821313/7415323377'
+};
+
+// ══════════════════════════════════════════════
+//  AD LOGIC
+// ══════════════════════════════════════════════
+let adCallback = null;
+let interstitialCount = 0;
+
+function showInterstitialAd(callback) {
+  interstitialCount++;
+  // Show every 3 level-ups
+  if (interstitialCount % 3 !== 0) { if(callback) callback(); return; }
+  adCallback = callback;
+  document.getElementById('ad-overlay').classList.remove('hidden');
+  try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch(e){}
+  // Auto-close after 8 seconds
+  setTimeout(() => closeAd(), 8000);
+}
+
+function closeAd() {
+  document.getElementById('ad-overlay').classList.add('hidden');
+  if (adCallback) { adCallback(); adCallback = null; }
+}
+
+let rewardTimer = null;
+function showRewardAd() {
+  document.getElementById('extra-life-btn').style.display = 'none';
+  document.getElementById('reward-overlay').classList.remove('hidden');
+  try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch(e){}
+  let secs = 5;
+  document.getElementById('reward-countdown').textContent = `Cerrando en ${secs}s...`;
+  rewardTimer = setInterval(() => {
+    secs--;
+    document.getElementById('reward-countdown').textContent = secs > 0
+      ? `Cerrando en ${secs}s...`
+      : '¡Gracias! Recibiste tu vida extra ❤️';
+    if (secs <= 0) {
+      clearInterval(rewardTimer);
+      setTimeout(() => {
+        document.getElementById('reward-overlay').classList.add('hidden');
+        lives++;
+        document.getElementById('lives-val').textContent = lives;
+      }, 1200);
+    }
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  SHARE
+// ══════════════════════════════════════════════
+function shareScore() {
+  const txt = `¡Jugué BurbujAZ y llegué al nivel ${level} con ${score} puntos! 🫧💥 ¿Puedes superarme? https://just-1more.github.io/burbujaz`;
+  if (navigator.share) {
+    navigator.share({ title: 'BurbujAZ', text: txt });
+  } else {
+    navigator.clipboard.writeText(txt).then(() => alert('¡Texto copiado! Pégalo donde quieras compartirlo.'));
+  }
+}
+
 // ══════════════════════════════════════════════
 //  BACKGROUND STARS
 // ══════════════════════════════════════════════
@@ -253,7 +425,7 @@ function initStars() {
     speed: Math.random()*.4+.1
   }));
 }
-function drawStars(t) {
+function drawStars() {
   bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
   bgCtx.fillStyle = '#0a0a1a';
   bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
@@ -267,7 +439,7 @@ function drawStars(t) {
   }
   requestAnimationFrame(drawStars);
 }
-initStars(); drawStars(0);
+initStars(); drawStars();
 window.addEventListener('resize', initStars);
 
 // ══════════════════════════════════════════════
@@ -275,33 +447,25 @@ window.addEventListener('resize', initStars);
 // ══════════════════════════════════════════════
 const gc   = document.getElementById('game-canvas');
 const gctx = gc.getContext('2d');
-
 let W, H;
-function resizeGame() {
-  W = gc.width  = window.innerWidth;
-  H = gc.height = window.innerHeight;
-}
+function resizeGame() { W = gc.width = window.innerWidth; H = gc.height = window.innerHeight; }
 resizeGame();
 window.addEventListener('resize', resizeGame);
 
-// ── Level config ──
-// Each level: how many bubbles fill the screen, how fast they spawn, size range, speed
 function levelConfig(lvl) {
   const l = Math.min(lvl, 20);
   return {
-    maxBubbles:    30 + l*12,           // total on screen to trigger overflow
-    spawnRate:     Math.max(30, 280 - l*22), // ms between spawns (faster each level)
-    spawnBurst:    1 + Math.floor(l/2),      // how many spawn at once
-    minR:          Math.max(14, 38 - l*1.5),
-    maxR:          Math.max(22, 68 - l*2),
-    minSpeed:      0.55 + l*0.12,
-    maxSpeed:      1.2  + l*0.22,
-    fillLimit:     0.72 - Math.min(l*.018, .25), // fraction of screen area = danger
-    lives:         3
+    maxBubbles:  30 + l*12,
+    spawnRate:   Math.max(30, 280 - l*22),
+    spawnBurst:  1 + Math.floor(l/2),
+    minR:        Math.max(14, 38 - l*1.5),
+    maxR:        Math.max(22, 68 - l*2),
+    minSpeed:    0.55 + l*0.12,
+    maxSpeed:    1.2  + l*0.22,
+    fillLimit:   0.72 - Math.min(l*.018, .25)
   };
 }
 
-// ── Palette ──
 const PALETTES = [
   ['#ff3cac','#ff6b6b','#ffa07a'],
   ['#00f5d4','#00c9ff','#7b2ff7'],
@@ -310,16 +474,13 @@ const PALETTES = [
   ['#f953c6','#b91d73','#ffe45e'],
   ['#4facfe','#00f2fe','#a8ff78'],
 ];
-
 function randColor(lvl) {
   const pal = PALETTES[lvl % PALETTES.length];
   return pal[Math.floor(Math.random()*pal.length)];
 }
 
-// ── State ──
 let bubbles=[], score=0, lives=3, level=1, running=false;
-let cfg, spawnTimer=0, lastTime=0, fillFraction=0;
-let animId=null;
+let lastTime=0, fillFraction=0, animId=null, spawnInterval=null;
 
 class Bubble {
   constructor(lvl) {
@@ -329,142 +490,86 @@ class Bubble {
     const angle = Math.random()*Math.PI*2;
     this.vx = Math.cos(angle)*spd;
     this.vy = Math.sin(angle)*spd;
-
-    // spawn from any edge + some random interior near edges
     const edge = Math.floor(Math.random()*4);
-    const margin = this.r*2;
-    if (edge===0)      { this.x=Math.random()*W; this.y=-margin; }
-    else if (edge===1) { this.x=W+margin; this.y=Math.random()*H; }
-    else if (edge===2) { this.x=Math.random()*W; this.y=H+margin; }
-    else               { this.x=-margin; this.y=Math.random()*H; }
-
+    const m = this.r*2;
+    if (edge===0)      { this.x=Math.random()*W; this.y=-m; }
+    else if (edge===1) { this.x=W+m; this.y=Math.random()*H; }
+    else if (edge===2) { this.x=Math.random()*W; this.y=H+m; }
+    else               { this.x=-m; this.y=Math.random()*H; }
     this.color  = randColor(lvl);
     this.alpha  = 0;
-    this.popped = false;
     this.wobble = Math.random()*Math.PI*2;
     this.wobbleSpeed = .04 + Math.random()*.03;
     this.points = Math.max(1, Math.round(8 - this.r/10));
   }
-
   update(dt) {
-    this.x += this.vx*dt;
-    this.y += this.vy*dt;
+    this.x += this.vx*dt; this.y += this.vy*dt;
     this.wobble += this.wobbleSpeed*dt;
-
-    // bounce off walls
     if (this.x - this.r < 0)  { this.x = this.r;  this.vx = Math.abs(this.vx); }
     if (this.x + this.r > W)  { this.x = W-this.r; this.vx = -Math.abs(this.vx); }
     if (this.y - this.r < 0)  { this.y = this.r;  this.vy = Math.abs(this.vy); }
     if (this.y + this.r > H)  { this.y = H-this.r; this.vy = -Math.abs(this.vy); }
-
-    // fade in
     if (this.alpha < 1) this.alpha = Math.min(1, this.alpha + .04*dt);
   }
-
   draw(ctx) {
-    const wobbleR = this.r + Math.sin(this.wobble)*this.r*.06;
+    const wr = this.r + Math.sin(this.wobble)*this.r*.06;
     ctx.save();
     ctx.globalAlpha = this.alpha;
-
-    // glow
-    const glow = ctx.createRadialGradient(
-      this.x - wobbleR*.3, this.y - wobbleR*.3, wobbleR*.05,
-      this.x, this.y, wobbleR*1.15
-    );
+    const glow = ctx.createRadialGradient(this.x-wr*.3, this.y-wr*.3, wr*.05, this.x, this.y, wr*1.15);
     glow.addColorStop(0, 'rgba(255,255,255,.45)');
     glow.addColorStop(.4, this.color+'cc');
     glow.addColorStop(1, this.color+'22');
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, wobbleR*1.12, 0, Math.PI*2);
-    ctx.fillStyle = glow;
-    ctx.fill();
-
-    // bubble body
-    const grad = ctx.createRadialGradient(
-      this.x - wobbleR*.35, this.y - wobbleR*.35, wobbleR*.08,
-      this.x, this.y, wobbleR
-    );
+    ctx.beginPath(); ctx.arc(this.x, this.y, wr*1.12, 0, Math.PI*2);
+    ctx.fillStyle = glow; ctx.fill();
+    const grad = ctx.createRadialGradient(this.x-wr*.35, this.y-wr*.35, wr*.08, this.x, this.y, wr);
     grad.addColorStop(0, 'rgba(255,255,255,.75)');
     grad.addColorStop(.25, this.color+'bb');
     grad.addColorStop(.7, this.color+'66');
     grad.addColorStop(1, this.color+'11');
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, wobbleR, 0, Math.PI*2);
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // rim
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, wobbleR, 0, Math.PI*2);
-    ctx.strokeStyle = this.color+'99';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // shine
-    ctx.beginPath();
-    ctx.arc(this.x - wobbleR*.3, this.y - wobbleR*.3, wobbleR*.22, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,255,255,.55)';
-    ctx.fill();
-
+    ctx.beginPath(); ctx.arc(this.x, this.y, wr, 0, Math.PI*2);
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath(); ctx.arc(this.x, this.y, wr, 0, Math.PI*2);
+    ctx.strokeStyle = this.color+'99'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(this.x-wr*.3, this.y-wr*.3, wr*.22, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill();
     ctx.restore();
   }
-
-  hits(px, py) {
-    const dx=px-this.x, dy=py-this.y;
-    return dx*dx+dy*dy <= this.r*this.r;
-  }
+  hits(px, py) { const dx=px-this.x, dy=py-this.y; return dx*dx+dy*dy<=this.r*this.r; }
 }
 
-// ── Spawn ──
 function spawnBubbles() {
   const c = levelConfig(level);
-  const count = c.spawnBurst;
-  for (let i=0; i<count; i++) {
-    if (bubbles.length < c.maxBubbles + 40) {
-      bubbles.push(new Bubble(level));
-    }
+  for (let i=0; i<c.spawnBurst; i++) {
+    if (bubbles.length < c.maxBubbles + 40) bubbles.push(new Bubble(level));
   }
 }
 
-// ── Fill calc ──
 function calcFill() {
-  const area = bubbles.reduce((s,b) => s + Math.PI*b.r*b.r*b.alpha, 0);
-  return area / (W*H);
+  return bubbles.reduce((s,b) => s + Math.PI*b.r*b.r*b.alpha, 0) / (W*H);
 }
 
-// ── Pop ──
 function popBubble(b) {
   score += b.points;
   spawnPopParticles(b.x, b.y, b.color, b.r);
   document.getElementById('score-val').textContent = score;
 }
 
-// ── Particles ──
 function spawnPopParticles(x, y, color, r) {
   const count = Math.min(10, Math.floor(r/4)+4);
   for (let i=0; i<count; i++) {
     const el = document.createElement('div');
     el.className = 'pop-particle';
     const size = 4+Math.random()*6;
-    el.style.cssText = `
-      left:${x}px; top:${y}px;
-      width:${size}px; height:${size}px;
-      background:${color};
-      --dx:${(Math.random()-0.5)*r*3}px;
-      --dy:${(Math.random()-0.5)*r*3}px;
-    `;
+    el.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;background:${color};--dx:${(Math.random()-.5)*r*3}px;--dy:${(Math.random()-.5)*r*3}px;`;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 650);
   }
 }
 
-// ── Click handler ──
 gc.addEventListener('click', e => {
   if (!running) return;
   const rect = gc.getBoundingClientRect();
-  const px = e.clientX - rect.left;
-  const py = e.clientY - rect.top;
-  // pop all hit (could overlap)
+  const px = e.clientX - rect.left, py = e.clientY - rect.top;
   let hit = false;
   bubbles = bubbles.filter(b => {
     if (!hit && b.hits(px,py)) { popBubble(b); hit=true; return false; }
@@ -472,77 +577,68 @@ gc.addEventListener('click', e => {
   });
 });
 
-// ── Game loop ──
+gc.addEventListener('touchstart', e => {
+  if (!running) return;
+  e.preventDefault();
+  const rect = gc.getBoundingClientRect();
+  for (const t of e.changedTouches) {
+    const px = t.clientX - rect.left, py = t.clientY - rect.top;
+    let hit = false;
+    bubbles = bubbles.filter(b => {
+      if (!hit && b.hits(px,py)) { popBubble(b); hit=true; return false; }
+      return true;
+    });
+  }
+}, {passive: false});
+
 function gameLoop(ts) {
   if (!running) return;
-  const dt = Math.min((ts - lastTime)/16.67, 3); // normalized to 60fps ticks
+  const dt = Math.min((ts - lastTime)/16.67, 3);
   lastTime = ts;
-
-  cfg = levelConfig(level);
-
-  // spawn
-  spawnTimer += ts - (lastTime - dt*16.67);
-  // simpler: just always track raw elapsed
-  // we'll handle spawn via setInterval below
-
-  // clear
+  const cfg = levelConfig(level);
   gctx.clearRect(0,0,W,H);
-
-  // update & draw
-  for (const b of bubbles) {
-    b.update(dt);
-    b.draw(gctx);
-  }
-
-  // fill bar
+  for (const b of bubbles) { b.update(dt); b.draw(gctx); }
   fillFraction = calcFill();
   const pct = Math.min(fillFraction / cfg.fillLimit, 1);
   document.getElementById('bar-fill').style.width = (pct*100)+'%';
-
-  // danger?
   if (pct >= 1) {
     lives--;
     document.getElementById('lives-val').textContent = lives;
-    bubbles = []; // clear screen
+    bubbles = [];
     if (lives <= 0) { endGame(); return; }
+    // Show extra life button when lives <= 1
+    if (lives <= 1) document.getElementById('extra-life-btn').style.display = 'block';
   }
-
-  // level up — score threshold
   const nextLevelScore = level * 60;
   if (score >= nextLevelScore) {
     level++;
     document.getElementById('level-val').textContent = level;
     restartSpawner();
     showLevelAnnounce(level);
+    // Show interstitial every 3 levels
+    showInterstitialAd(null);
   }
-
   animId = requestAnimationFrame(gameLoop);
 }
 
-// ── Spawner interval (separate from rAF) ──
-let spawnInterval = null;
 function restartSpawner() {
   if (spawnInterval) clearInterval(spawnInterval);
   const c = levelConfig(level);
   spawnInterval = setInterval(spawnBubbles, c.spawnRate);
-  // immediate burst so screen fills fast
   for(let i=0;i<3;i++) spawnBubbles();
 }
 
-// ── Level announce ──
 function showLevelAnnounce(lvl) {
   const el = document.getElementById('level-announce');
   el.innerHTML = `<div class="level-badge">NIVEL ${lvl}</div><div class="level-sub">¡A reventar más!</div>`;
-  setTimeout(() => {
-    el.innerHTML = '';
-  }, 1800);
+  setTimeout(() => { el.innerHTML = ''; }, 1800);
 }
 
-// ── Start ──
 function startGame() {
   hideAll();
   document.getElementById('hud').classList.remove('hidden');
-  bubbles = []; score = 0; lives = 3; level = 1; fillFraction = 0;
+  document.getElementById('extra-life-btn').style.display = 'none';
+  bubbles=[]; score=0; lives=3; level=1; fillFraction=0;
   document.getElementById('score-val').textContent  = 0;
   document.getElementById('lives-val').textContent  = 3;
   document.getElementById('level-val').textContent  = 1;
@@ -559,9 +655,10 @@ function endGame() {
   clearInterval(spawnInterval);
   cancelAnimationFrame(animId);
   document.getElementById('hud').classList.add('hidden');
+  document.getElementById('extra-life-btn').style.display = 'none';
   document.getElementById('end-score-val').textContent = score;
   document.getElementById('end-level-val').textContent  = level;
-  document.getElementById('end-title').textContent = lives<=0 ? 'GAME OVER' : '¡GANASTE!';
+  document.getElementById('end-title').textContent = '💀 GAME OVER';
   document.getElementById('end-screen').classList.remove('hidden');
 }
 
@@ -570,6 +667,7 @@ function showStart() {
   clearInterval(spawnInterval);
   cancelAnimationFrame(animId);
   document.getElementById('hud').classList.add('hidden');
+  document.getElementById('extra-life-btn').style.display = 'none';
   hideAll();
   document.getElementById('start-screen').classList.remove('hidden');
   bubbles=[];
